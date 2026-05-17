@@ -19,6 +19,27 @@ type Listing = {
   featured?: boolean;
 };
 
+type AiRecommendation = {
+  listingId: string;
+  title: string;
+  reason: string;
+  confidence: number;
+};
+
+type AiInsight = {
+  title: string;
+  summary: string;
+  action: string;
+  priority: 'high' | 'medium' | 'low';
+};
+
+type MerchantCopilotResult = {
+  headline: string;
+  description: string;
+  riskFlags: string[];
+  trustNudges: string[];
+};
+
 const fallbackSummary: Summary = {
   activeMerchants: 1280,
   countriesLive: 9,
@@ -65,38 +86,144 @@ const fallbackListings: Listing[] = [
   },
 ];
 
+const fallbackRecommendations: AiRecommendation[] = [
+  {
+    listingId: 'phone-ke',
+    title: 'Refurbished Android Bundle',
+    reason: 'electronics demand is strong and same-day regional settlement is supported',
+    confidence: 97,
+  },
+  {
+    listingId: 'solar-kit-ng',
+    title: 'Solar Starter Kit',
+    reason: 'high-trust merchant profile with practical cross-border utility',
+    confidence: 95,
+  },
+  {
+    listingId: 'produce-rw',
+    title: 'Farm Fresh Produce Crate',
+    reason: 'fast fulfillment and wallet-friendly local checkout options',
+    confidence: 90,
+  },
+];
+
+const fallbackInsights: AiInsight[] = [
+  {
+    title: 'Electronics demand is accelerating in Kenya',
+    summary:
+      'Mobile-first buyers are converting faster on listings that mention wallet compatibility and same-day dispatch.',
+    action: 'Prioritize faster-delivery badges on electronics inventory this week.',
+    priority: 'high',
+  },
+  {
+    title: 'Trust scores are driving conversion in groceries',
+    summary:
+      'Shoppers are favoring merchants above 96% trust when settlement includes local wallet options.',
+    action: 'Promote trust score and local payout methods above the fold for produce cards.',
+    priority: 'medium',
+  },
+  {
+    title: 'Fashion listings benefit from richer copy',
+    summary:
+      'Listings with cultural context and delivery clarity are retaining more product detail views.',
+    action: 'Use merchant copilot text suggestions to enrich artisan product descriptions.',
+    priority: 'low',
+  },
+];
+
+const fallbackCopilot: MerchantCopilotResult = {
+  headline: 'Solar Starter Kit ready for trusted checkout across Nigeria',
+  description:
+    'Solar Starter Kit is positioned as a reliable energy offer with transparent delivery expectations and settlement through USDC and NGN bank transfer.',
+  riskFlags: [
+    'Clarify dispatch timelines to reduce post-payment uncertainty.',
+    'State wallet or mobile money compatibility directly in the first sentence.',
+  ],
+  trustNudges: [
+    'Highlight merchant location and fulfillment speed near the buy action.',
+    'Include proof of authenticity, freshness, or product condition where relevant.',
+  ],
+};
+
 async function getMarketplaceData() {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   if (!baseUrl) {
-    return { summary: fallbackSummary, listings: fallbackListings, apiConnected: false };
+    return {
+      summary: fallbackSummary,
+      listings: fallbackListings,
+      recommendations: fallbackRecommendations,
+      insights: fallbackInsights,
+      copilot: fallbackCopilot,
+      apiConnected: false,
+    };
   }
 
   try {
-    const [summaryResponse, listingsResponse] = await Promise.all([
+    const [summaryResponse, listingsResponse, recommendationsResponse, insightsResponse] =
+      await Promise.all([
       fetch(`${baseUrl}/api/marketplace/summary`, { next: { revalidate: 60 } }),
       fetch(`${baseUrl}/api/listings`, { next: { revalidate: 60 } }),
+      fetch(`${baseUrl}/api/ai/recommendations?country=Kenya&category=Electronics`, {
+        next: { revalidate: 60 },
+      }),
+      fetch(`${baseUrl}/api/ai/insights`, { next: { revalidate: 60 } }),
     ]);
 
-    if (!summaryResponse.ok || !listingsResponse.ok) {
+    const copilotResponse = await fetch(`${baseUrl}/api/ai/merchant-copilot`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        productName: 'Solar Starter Kit',
+        category: 'Energy',
+        country: 'Nigeria',
+        settlement: 'USDC and NGN bank transfer',
+      }),
+      next: { revalidate: 60 },
+    });
+
+    if (
+      !summaryResponse.ok ||
+      !listingsResponse.ok ||
+      !recommendationsResponse.ok ||
+      !insightsResponse.ok ||
+      !copilotResponse.ok
+    ) {
       throw new Error('API request failed');
     }
 
     const summary = (await summaryResponse.json()) as Summary;
     const listingsPayload = (await listingsResponse.json()) as { items: Listing[] };
+    const recommendationsPayload =
+      (await recommendationsResponse.json()) as { items: AiRecommendation[] };
+    const insightsPayload = (await insightsResponse.json()) as { items: AiInsight[] };
+    const copilotPayload = (await copilotResponse.json()) as { result: MerchantCopilotResult };
 
     return {
       summary,
       listings: listingsPayload.items,
+      recommendations: recommendationsPayload.items,
+      insights: insightsPayload.items,
+      copilot: copilotPayload.result,
       apiConnected: true,
     };
   } catch (_error) {
-    return { summary: fallbackSummary, listings: fallbackListings, apiConnected: false };
+    return {
+      summary: fallbackSummary,
+      listings: fallbackListings,
+      recommendations: fallbackRecommendations,
+      insights: fallbackInsights,
+      copilot: fallbackCopilot,
+      apiConnected: false,
+    };
   }
 }
 
 export default async function HomePage() {
-  const { summary, listings, apiConnected } = await getMarketplaceData();
+  const { summary, listings, recommendations, insights, copilot, apiConnected } =
+    await getMarketplaceData();
 
   return (
     <main className="page-shell">
@@ -112,8 +239,8 @@ export default async function HomePage() {
             <a className="primary-action" href="#featured-listings">
               Explore listings
             </a>
-            <a className="secondary-action" href="#why-stellarmarket">
-              Why it works
+            <a className="secondary-action" href="#ai-layer">
+              See AI layer
             </a>
           </div>
           <div className="status-pill">
@@ -160,6 +287,53 @@ export default async function HomePage() {
         <div>
           <strong>Operator friendly</strong>
           <span>Designed for lean marketplaces that need fast launch velocity.</span>
+        </div>
+      </section>
+
+      <section className="section-block ai-section" id="ai-layer">
+        <div className="section-heading">
+          <span className="eyebrow">AI Layer</span>
+          <h2>Built-in marketplace intelligence for shoppers, merchants, and operators.</h2>
+        </div>
+        <div className="ai-grid">
+          <article className="ai-card ai-card-strong">
+            <p className="panel-label">Shopper recommendations</p>
+            <div className="recommendation-stack">
+              {recommendations.map((item) => (
+                <div className="recommendation-item" key={item.listingId}>
+                  <div>
+                    <h3>{item.title}</h3>
+                    <p>{item.reason}</p>
+                  </div>
+                  <strong>{item.confidence}%</strong>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="ai-card">
+            <p className="panel-label">Merchant copilot</p>
+            <h3>{copilot.headline}</h3>
+            <p>{copilot.description}</p>
+            <div className="copilot-columns">
+              <div>
+                <span className="mini-label">Risk flags</span>
+                <ul>
+                  {copilot.riskFlags.map((flag) => (
+                    <li key={flag}>{flag}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <span className="mini-label">Trust nudges</span>
+                <ul>
+                  {copilot.trustNudges.map((nudge) => (
+                    <li key={nudge}>{nudge}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -211,9 +385,21 @@ export default async function HomePage() {
             <p>Surface trust score, location, payout method, and delivery expectations right in the card.</p>
           </article>
           <article>
-            <h3>API-backed storytelling</h3>
-            <p>The homepage is ready to switch from demo content to live backend metrics with one env var.</p>
+            <h3>AI-backed growth loops</h3>
+            <p>Recommendations, merchant guidance, and operator insights now share the same backend surface.</p>
           </article>
+        </div>
+        <div className="insight-board">
+          {insights.map((insight) => (
+            <article className="insight-card" key={insight.title}>
+              <span className={`priority-badge priority-${insight.priority}`}>
+                {insight.priority} priority
+              </span>
+              <h3>{insight.title}</h3>
+              <p>{insight.summary}</p>
+              <strong>{insight.action}</strong>
+            </article>
+          ))}
         </div>
       </section>
     </main>

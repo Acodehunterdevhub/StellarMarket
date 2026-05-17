@@ -221,6 +221,130 @@ dt {
   background: rgba(255, 255, 255, 0.32);
 }
 
+.ai-section {
+  margin-top: 0.5rem;
+}
+
+.ai-grid,
+.insight-board,
+.copilot-columns {
+  display: grid;
+  gap: 1rem;
+}
+
+.ai-grid {
+  grid-template-columns: 1.05fr 0.95fr;
+}
+
+.ai-card,
+.insight-card {
+  border-radius: 24px;
+  padding: 1.4rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 250, 244, 0.78);
+  box-shadow: var(--shadow);
+}
+
+.ai-card-strong {
+  background:
+    radial-gradient(circle at top right, rgba(242, 181, 68, 0.24), transparent 30%),
+    rgba(255, 250, 244, 0.85);
+}
+
+.recommendation-stack {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.recommendation-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(15, 123, 108, 0.08);
+}
+
+.recommendation-item h3,
+.ai-card h3,
+.insight-card h3 {
+  margin: 0 0 0.45rem;
+}
+
+.recommendation-item p,
+.ai-card p,
+.insight-card p,
+.copilot-columns li {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.recommendation-item strong {
+  min-width: 4rem;
+  text-align: right;
+  font-family: "Trebuchet MS", Verdana, sans-serif;
+  font-size: 1.4rem;
+  color: var(--accent-strong);
+}
+
+.copilot-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1rem;
+}
+
+.mini-label {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  font-family: "Trebuchet MS", Verdana, sans-serif;
+}
+
+.copilot-columns ul {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.insight-board {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 1.2rem;
+}
+
+.priority-badge {
+  display: inline-block;
+  margin-bottom: 0.9rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: "Trebuchet MS", Verdana, sans-serif;
+}
+
+.priority-high {
+  background: rgba(170, 51, 24, 0.12);
+  color: #8d321c;
+}
+
+.priority-medium {
+  background: rgba(242, 181, 68, 0.18);
+  color: #8f6514;
+}
+
+.priority-low {
+  background: rgba(15, 123, 108, 0.12);
+  color: var(--accent-strong);
+}
+
+.insight-card strong {
+  display: block;
+  margin-top: 1rem;
+  font-family: "Trebuchet MS", Verdana, sans-serif;
+}
+
 .stats-band span,
 .listing-card p,
 .listing-details dd,
@@ -322,8 +446,14 @@ dt {
 @media (max-width: 900px) {
   .hero,
   .stats-band,
+  .ai-grid,
+  .insight-board,
   .listing-grid,
   .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .copilot-columns {
     grid-template-columns: 1fr;
   }
 
